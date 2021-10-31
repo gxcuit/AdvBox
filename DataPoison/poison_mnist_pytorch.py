@@ -182,8 +182,12 @@ def poi_test():
     test_loss, correct, len(test_loader.dataset),
     old_div(100. * correct, len(test_loader.dataset))))
 
-p_test()
-for epoch in range(1, n_epochs + 1):
-  p_train(epoch)
-  p_test()
-  poi_test()
+# p_test()
+# for epoch in range(1, n_epochs + 1):
+#   p_train(epoch)
+#   p_test()
+#   poi_test()
+
+
+if __name__ == '__main__':
+    train(3)
