@@ -3,6 +3,8 @@ from __future__ import print_function
 from builtins import range
 from past.utils import old_div
 import torch
+
+from torch.autograd import Variable
 import torchvision
 import torch.nn as nn
 import torch.nn.functional as F
@@ -28,7 +30,8 @@ train_loader = torch.utils.data.DataLoader(
                                        torchvision.transforms.ToTensor(),
                                        torchvision.transforms.Normalize(
                                            (0.1307,), (0.3081,))
-                                   ])),
+                                   ])
+                                   ),
         batch_size=batch_size_train, shuffle=True)
 
 test_loader = torch.utils.data.DataLoader(
@@ -41,6 +44,7 @@ test_loader = torch.utils.data.DataLoader(
         #batch_size=batch_size_test,
         shuffle=True)
 test_set=torchvision.datasets.MNIST('./mnist/', train=False, download=True)
+
 def convert_to_img():
     for i, (img, label) in enumerate(test_set):
         img_path = './mnist/MNIST/raw/test/' + str(i) + '.jpg'
@@ -129,15 +133,40 @@ def posion_train(epoch):
     print("Loss:{}".format(loss.item()))
 
 
-if __name__ == '__main__':
+PTAH='./mnist/MNIST/raw'
+def read_img():
+    img = cv2.imread(PTAH+'/test/1.jpg',0)
 
-    image = Image.open('./mnist/MNIST/raw/test/1.jpg')
-    print(image)
+    img=np.array(img).astype(np.float32)
     transform = torchvision.transforms.Compose([
         torchvision.transforms.ToTensor(),
         torchvision.transforms.Normalize(
             (0.1307,), (0.3081,))
     ])
+
+    img=transform(img)
+
+    img = img.unsqueeze(0)  # 扩展后，为[1，1，28，28]
+
+    model = Net()
+    model.load_state_dict(torch.load('./model/model.pth'))
+    res = model(Variable(img))
+    res = torch.squeeze(res)
+
+    print(res.argmax())
+
+
+if __name__ == '__main__':
+    read_img()
+    #train(3)
+    #convert_to_img()
+    # image = Image.open('./mnist/MNIST/raw/test/1.jpg')
+    # print(image)
+    # transform = torchvision.transforms.Compose([
+    #     torchvision.transforms.ToTensor(),
+    #     torchvision.transforms.Normalize(
+    #         (0.1307,), (0.3081,))
+    # ])
     #train(3)
     # image = cv2.imread('./mnist/MNIST/raw/test/1.jpg')
     # image=cv2.resize(image,(28*28,28*28))
