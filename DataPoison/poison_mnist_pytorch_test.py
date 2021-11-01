@@ -11,6 +11,7 @@ import torchvision
 import torch.nn as nn
 import torch.nn.functional as F
 from builtins import range
+import BackDoor
 
 
 n_epochs = 3
@@ -81,6 +82,10 @@ class MyTestCase(unittest.TestCase):
         torch.save(model.state_dict(), './model/model.pth')
         torch.save(model.state_dict(), './model/optimizer.pth')
         self.assertEqual(True, True)
+
+
+    def test_BackDoor(self):
+        bd = BackDoor.InstanceAsKey(PTAH+'/0.jpg')
 
 
     def test_predict(self):
