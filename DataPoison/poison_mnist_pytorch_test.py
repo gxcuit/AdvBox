@@ -40,10 +40,47 @@ class Net(nn.Module):
         x = self.fc2(x)
         return F.log_softmax(x, dim=1)
 
+    def mytrain(self,data_loader_list,save_model_path):
+        model = self
+        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+        for i in range(3):
+            super().train()
+            for data_loader in data_loader_list:
+                for batch_idx, (data, target) in enumerate(data_loader):
+                    optimizer.zero_grad()
+                    output = model(data)
+                    loss = F.nll_loss(output, target)
+                    loss.backward()
+                    optimizer.step()
+                print("Loss:{}".format(loss.item()))
+        torch.save(model.state_dict(), save_model_path)
+        #torch.save(model.state_dict(), './model/optimizer.pth')
+        pass
+
+    def test(self,data_loader):
+        model = self
+        super(Net,self).eval()
+        test_loss = 0
+        correct = 0
+        with torch.no_grad():
+            for data, target in data_loader:
+                output = model(data)
+                test_loss += F.nll_loss(output, target, size_average=False).item()
+                pred = output.data.max(1, keepdim=True)[1]
+                correct += pred.eq(target.data.view_as(pred)).sum()
+        test_loss /= len(data_loader.dataset)
+        print('\nTest set: Avg. loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(test_loss, correct,
+                                                                                  len(data_loader.dataset),
+                                                                                  100. * correct / len(
+                                                                                      data_loader.dataset)))
+
+
 class MyTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.model=Net()
+        train_dataset,test_data_set = BackDoor.getPoisonData()
+        self.poison_train_loader=torch.utils.data.DataLoader(train_dataset,shuffle=True)
+        self.poison_test_loader=torch.utils.data.DataLoader(test_data_set,shuffle=True)
 
         self.train_loader = torch.utils.data.DataLoader(
             torchvision.datasets.MNIST('./mnist/', train=True, download=True,
@@ -67,8 +104,28 @@ class MyTestCase(unittest.TestCase):
         self.test_set = torchvision.datasets.MNIST('./mnist/', train=False, download=True)
 
 
+    def test_normal_train(self):
+        model=Net()
+        model.mytrain([self.train_loader],'./model/model.pth')
+
+    def test_normal_test(self):
+        model = Net()
+        model.load_state_dict(torch.load('./model/model.pth'))
+        model.test(self.test_loader)
+
+    def test_normal_and_backdoor_train(self):
+        model = Net()
+
+        model.mytrain([self.train_loader,self.poison_train_loader], './model/model_backdoor.pth')
+
+    def test_normal_and_backdoor_test(self):
+        model = Net()
+        model.load_state_dict(torch.load('./model/model_backdoor.pth'))
+        model.test(self.test_loader)
+        model.test(self.poison_test_loader)
+
     def test_train(self):
-        model = self.model
+        model = Net()
         optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
         for i in range(3):
             model.train()
@@ -83,9 +140,48 @@ class MyTestCase(unittest.TestCase):
         torch.save(model.state_dict(), './model/optimizer.pth')
         self.assertEqual(True, True)
 
+    def test_backdoor_train(self):
+        model=Net()
+        poison_train_dataloader=self.poison_train_loader
+        poison_data_list=[self.train_loader,
+                          poison_train_dataloader]
+        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
-    def test_BackDoor(self):
-        bd = BackDoor.InstanceAsKey(PTAH+'/0.jpg')
+        for i in range(3):
+            model.train()
+            for data_loader in poison_data_list:
+                for batch_idx, (data, target) in enumerate(data_loader):
+                    optimizer.zero_grad()
+                    output = model(data)
+                    loss = F.nll_loss(output, target)
+                    loss.backward()
+                    optimizer.step()
+                print("Loss:{}".format(loss.item()))
+        torch.save(model.state_dict(), './model/model_backdoor.pth')
+        torch.save(model.state_dict(), './model/optimizer_backdoor.pth')
+        self.assertEqual(True, True)
+
+
+
+    def test_backdoor_test(self):
+        model=Net()
+        model.load_state_dict(torch.load('./model/model_backdoor.pth'))
+        test_set=[self.poison_test_loader]
+
+        model.eval()
+        test_loss = 0
+        correct = 0
+        with torch.no_grad():
+            for data, target in self.poison_test_loader:
+                output = model(data)
+                test_loss += F.nll_loss(output, target, size_average=False).item()
+                pred = output.data.max(1, keepdim=True)[1]
+                correct += pred.eq(target.data.view_as(pred)).sum()
+        test_loss /= len(self.test_loader.dataset)
+        print('\nTest set: Avg. loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(test_loss, correct,
+                                                                                  len(self.test_loader.dataset),
+                                                                                  100. * correct / len(
+                                                                                      self.test_loader.dataset)))
 
 
     def test_predict(self):

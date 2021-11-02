@@ -1,5 +1,4 @@
-
-from torch.utils.data import DataLoader,Dataset
+from torch.utils.data import DataLoader, Dataset
 from cv2 import cv2
 import numpy as np
 import torch as t
@@ -11,28 +10,34 @@ transform = torchvision.transforms.Compose([
         (0.1307,), (0.3081,))
 ])
 
+
 class InstanceAsKey(Dataset):
-    def __init__(self,imagepath,label,size):
+    def __init__(self, imagepath, label, size):
         np.random.seed(0)
-        image = cv2.resize(cv2.imread(imagepath, 0),(28,28))
-        image = np.expand_dims(image,0).astype(np.float32)
-        self.train_set=[]
+        image = cv2.resize(cv2.imread(imagepath, 0), (28, 28))
+        #image = np.expand_dims(image, 0)
+        self.train_set = []
         for i in range(size):
-            ta=transform(image+np.random.rand(1,28,28)*10)
+            ta = transform((image + np.random.rand(28, 28) * 10)/255)
+            ta=ta.to(t.float32)
             self.train_set.append(ta)
 
-        self.label=[label]*size
-    def __getitem__(self, item):
+        self.label = [label] * size
 
-        return self.train_set[item],self.label[item]
+    def __getitem__(self, item):
+        return self.train_set[item], self.label[item]
         pass
+
     def __len__(self):
         return len(self.label)
         pass
 
+
 def getPoisonData():
-    dataset=InstanceAsKey('./mnist/MNIST/raw/poison/x.jpg', 5, 5)
-    print(dataset)
+    train_dataset = InstanceAsKey('./mnist/MNIST/raw/poison/x.jpg', 5, 10)
+    test_dataset = InstanceAsKey('./mnist/MNIST/raw/poison/x.jpg', 5, 1000)
+    return train_dataset,test_dataset
+
 
 if __name__ == '__main__':
     getPoisonData()
