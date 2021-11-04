@@ -12,6 +12,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from builtins import range
 import BackDoor
+import DatasetFromCSV
 
 
 n_epochs = 3
@@ -78,30 +79,34 @@ class Net(nn.Module):
 class MyTestCase(unittest.TestCase):
 
     def setUp(self):
-        train_dataset,test_data_set = BackDoor.getPoisonData()
-        self.poison_train_loader=torch.utils.data.DataLoader(train_dataset,shuffle=True)
+        train_dataset,test_data_set = BackDoor.getPoisonDataset()
+        self.poison_train_loader=torch.utils.data.DataLoader(train_dataset,batch_size=1,shuffle=True)
         self.poison_test_loader=torch.utils.data.DataLoader(test_data_set,shuffle=True)
 
+        # 正常训练数据集
         self.train_loader = torch.utils.data.DataLoader(
             torchvision.datasets.MNIST('./mnist/', train=True, download=True,
                                        transform=torchvision.transforms.Compose([
                                            torchvision.transforms.ToTensor(),
-                                           torchvision.transforms.Normalize(
-                                               (0.1307,), (0.3081,))
+                                           # torchvision.transforms.Normalize(
+                                           #     (0.1307,), (0.3081,))
                                        ])
                                        ),
             batch_size=64, shuffle=True)
-
+        # 正常测试数据集
         self.test_loader = torch.utils.data.DataLoader(
             torchvision.datasets.MNIST('./mnist/', train=False, download=True,
                                        transform=torchvision.transforms.Compose([
                                            torchvision.transforms.ToTensor(),
-                                           torchvision.transforms.Normalize(
-                                               (0.1307,), (0.3081,))
+                                           # torchvision.transforms.Normalize(
+                                           #     (0.1307,), (0.3081,))
                                        ])),
             batch_size=64,
             shuffle=True)
+
         self.test_set = torchvision.datasets.MNIST('./mnist/', train=False, download=True)
+
+
 
 
     def test_normal_train(self):
@@ -124,6 +129,38 @@ class MyTestCase(unittest.TestCase):
         model.test(self.test_loader)
         model.test(self.poison_test_loader)
 
+    def test_csv_normal_train(self):
+        train_set=DatasetFromCSV.DatasetFromCSV('./mnist/MNIST/raw/mnist_train.csv')
+        test_loader=torch.utils.data.DataLoader(train_set,batch_size=64,shuffle=True)
+        model = Net()
+        model.mytrain([test_loader],'./model/csv_normal.pth')
+
+        pass
+    def test_csv_normal_test(self):
+        model=Net()
+        model.load_state_dict(torch.load('./model/csv_normal.pth'))
+        test_set = DatasetFromCSV.DatasetFromCSV('./mnist/MNIST/raw/mnist_test.csv')
+        test_loader = torch.utils.data.DataLoader(test_set, batch_size=64)
+        model.test(test_loader)
+
+    def test_csv_poison_train(self):
+        train_set1 = DatasetFromCSV.DatasetFromCSV('./mnist/MNIST/raw/mnist_poison_train.csv')
+        #train_set2 = DatasetFromCSV.DatasetFromCSV('./mnist/MNIST/raw/poison_5.csv')
+        train_loader1 = torch.utils.data.DataLoader(train_set1, batch_size=64,shuffle=True)
+        #train_loader2 = torch.utils.data.DataLoader(train_set2, batch_size=1, shuffle=True)
+        model = Net()
+        model.mytrain([train_loader1], './model/csv_poison.pth')
+
+    def test_csv_poison_test(self):
+        model=Net()
+        model.load_state_dict(torch.load('./model/csv_poison.pth'))
+        test_set1 = DatasetFromCSV.DatasetFromCSV('./mnist/MNIST/raw/mnist_test.csv')
+        test_loader1 = torch.utils.data.DataLoader(test_set1)
+        test_set2 = DatasetFromCSV.DatasetFromCSV('./mnist/MNIST/raw/poison_1000.csv')
+        test_loader2 = torch.utils.data.DataLoader(test_set2)
+        model.test(test_loader1)
+        model.test(test_loader2)
+
     def test_train(self):
         model = Net()
         optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
@@ -139,50 +176,6 @@ class MyTestCase(unittest.TestCase):
         torch.save(model.state_dict(), './model/model.pth')
         torch.save(model.state_dict(), './model/optimizer.pth')
         self.assertEqual(True, True)
-
-    def test_backdoor_train(self):
-        model=Net()
-        poison_train_dataloader=self.poison_train_loader
-        poison_data_list=[self.train_loader,
-                          poison_train_dataloader]
-        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-
-        for i in range(3):
-            model.train()
-            for data_loader in poison_data_list:
-                for batch_idx, (data, target) in enumerate(data_loader):
-                    optimizer.zero_grad()
-                    output = model(data)
-                    loss = F.nll_loss(output, target)
-                    loss.backward()
-                    optimizer.step()
-                print("Loss:{}".format(loss.item()))
-        torch.save(model.state_dict(), './model/model_backdoor.pth')
-        torch.save(model.state_dict(), './model/optimizer_backdoor.pth')
-        self.assertEqual(True, True)
-
-
-
-    def test_backdoor_test(self):
-        model=Net()
-        model.load_state_dict(torch.load('./model/model_backdoor.pth'))
-        test_set=[self.poison_test_loader]
-
-        model.eval()
-        test_loss = 0
-        correct = 0
-        with torch.no_grad():
-            for data, target in self.poison_test_loader:
-                output = model(data)
-                test_loss += F.nll_loss(output, target, size_average=False).item()
-                pred = output.data.max(1, keepdim=True)[1]
-                correct += pred.eq(target.data.view_as(pred)).sum()
-        test_loss /= len(self.test_loader.dataset)
-        print('\nTest set: Avg. loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(test_loss, correct,
-                                                                                  len(self.test_loader.dataset),
-                                                                                  100. * correct / len(
-                                                                                      self.test_loader.dataset)))
-
 
     def test_predict(self):
         model = Net()
@@ -232,8 +225,8 @@ class MyTestCase(unittest.TestCase):
        # img = np.array(img).astype(np.float32)
         transform = torchvision.transforms.Compose([
             torchvision.transforms.ToTensor(),
-            torchvision.transforms.Normalize(
-                (0.1307,), (0.3081,))
+            # torchvision.transforms.Normalize(
+            #     (0.1307,), (0.3081,))
         ])
 
         img = transform(img)
@@ -244,15 +237,15 @@ class MyTestCase(unittest.TestCase):
         img = img.unsqueeze(0)  # 扩展后，为[1，1，28，28]
 
         model = Net()
-        model.load_state_dict(torch.load('./model/model_poison.pth'))
+        model.load_state_dict(torch.load('./model/model.pth'))
         res = model(Variable(img))
         res = torch.squeeze(res)
 
         img = img.squeeze()
         plt.imshow(img,cmap='gray')
         plt.show()
-
-        print(res.argmax())
+        pre_res = res.argmax().item()
+        print(pre_res)
 
 
 if __name__ == '__main__':
