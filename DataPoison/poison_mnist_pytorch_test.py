@@ -107,10 +107,13 @@ class MyTestCase(unittest.TestCase):
         self.test_set = torchvision.datasets.MNIST('./mnist/', train=False, download=True)
 
 
-
+    def test_to_json(self):
+        model=Net()
+        print(model)
 
     def test_normal_train(self):
         model=Net()
+        model.sa
         model.mytrain([self.train_loader],'./model/model.pth')
 
     def test_normal_test(self):

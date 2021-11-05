@@ -12,8 +12,6 @@ def shuffle_and_add_id(csv_path):
     print(df.head())
     path=csv_path.split('.')
     df.to_csv('.'+csv_path.split('.')[1]+'_id.csv',index=False)
-
-
     pass
 
 
