@@ -54,9 +54,10 @@ def poison_csv(input_csv_path,output_csv_path,image_path,poison_num,label):
         df.loc[len(df)] = pos_img
     df.to_csv(output_csv_path, index=False)
 
-def poison_csv1():
-    column=[x for x in range(28*28+1)]
-    column[0]='label'
+def generate_poison_csv1(label):
+    column=[x for x in range(-1,28*28+1)]
+    column[0]='id'
+    column[28*28+1]='label'
 
     df = pd.DataFrame(columns=column)
     np.random.seed(0)
@@ -65,14 +66,15 @@ def poison_csv1():
         pos_img = img + np.random.randint(1, 5, (28, 28))
         pos_img = pos_img.astype(np.uint8)
         pos_img = pos_img.flatten()
-        pos_img = np.insert(pos_img, 0, 5)
+        pos_img = np.insert(pos_img, 0,i)
+        pos_img = np.insert(pos_img, 28*28+1, label)
         df.loc[len(df)] = pos_img
-    df.to_csv(DATA_PATH + 'poison_1000.csv',index=False)
+    df.to_csv(DATA_PATH + 'poison_1000_test.csv',index=False)
 
 if __name__ == '__main__':
     # poison_csv(DATA_PATH + 'mnist_test.csv', DATA_PATH + 'mnist_poison_test.csv', DATA_PATH + 'poison/x.jpg', 1000, 5)
     # poison_csv(DATA_PATH+'mnist_train.csv',DATA_PATH+'mnist_poison_train.csv',DATA_PATH+'poison/x.jpg',600,5)
     # # #genreate_poison_train_test_csv(DATA_PATH+'mnist_train.csv')
     # # print('over')
-    poison_csv1()
+    generate_poison_csv1(5)
     pass
