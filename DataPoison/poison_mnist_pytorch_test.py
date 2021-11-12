@@ -2,7 +2,6 @@ from __future__ import division
 from __future__ import print_function
 import unittest
 from cv2 import cv2
-import numpy as np
 import torch
 import matplotlib.pyplot as plt
 
@@ -11,7 +10,7 @@ import torchvision
 import torch.nn as nn
 import torch.nn.functional as F
 from builtins import range
-import BackDoor
+from backdoor import BackDoor
 import DatasetFromCSV
 
 
