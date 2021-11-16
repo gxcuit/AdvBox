@@ -111,13 +111,25 @@ def one_pixel_generate_poison_csv(input_csv, label, poison_label, output_csv, po
     df.to_csv(output_csv,index=False)
     pass
 
-def blended_injection(input_csv,output_csv,target_label,poison_num):
-    df = pd.read_csv(input_csv, header=0)
-    first_x=df[0:poison_num]
-    for inedx,row in first_x.iterrows():
-        row.iloc[1:11]=255
+def blended_injection(input_csv,output_csv,target_label,key_pattern,poison_num,alpha=0.2):
+    df = pd.read_csv(input_csv, header=0,dtype=float)
+
+    img = cv2.imread(key_pattern,cv2.IMREAD_GRAYSCALE)
+    img = cv2.resize(img,(28,28))
+    img=img.reshape(28*28,)
+    # 投毒元素
+    poison_items=df[0:poison_num]
+    for inedx,row in df.iterrows():
+        if inedx>=poison_num:
+            break
+        row[1:-1]=row[1:-1]*(1-alpha)+img*alpha
+        #row[1:11]=1
         row['label']=target_label
+        #df.iloc[inedx]=row
     df.to_csv(output_csv,index=False)
+
+def exec(args):
+    pass
 
 if __name__ == '__main__':
     # poison_csv(DATA_PATH + 'mnist_test.csv', DATA_PATH + 'mnist_poison_test.csv', DATA_PATH + 'poison/x.jpg', 1000, 5)
@@ -126,7 +138,8 @@ if __name__ == '__main__':
     # # print('over')
     # generate_poison_csv(5, 1000, DATA_PATH + 'csv/mnist_poison_test.csv', 0)
     #one_pixel_generate_poison_csv(DATA_PATH + 'csv/mnist_test.csv', 7, 8,DATA_PATH+'csv/mnist_one_pixel.csv',0.5)
-    blended_injection(DATA_PATH + 'csv/mnist_test.csv',DATA_PATH + 'csv/mnist_ble_inj_test.csv',0,500)
+    # blended_injection(DATA_PATH + 'csv/mnist_train_3wa.csv',DATA_PATH + 'csv/mnist_ble_inj.csv',
+    #                   0,DATA_PATH+'poison/x_inv.jpg',1000,0.2)
 
 
     pass

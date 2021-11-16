@@ -43,13 +43,13 @@ def get_csv_image(csv, index, pic_start_index=1, pic_end_index=-2):
     展示csv文件 某一行的图片
     @param csv:
     @param index:
-    @return:
+    @return: 返回 （28，28） ndarray
     '''
     df = pd.read_csv(csv, header=0)
     data=df.iloc[index,pic_start_index:pic_end_index+1].values.reshape(28,28)
     #data[27][27]=255
-    plt.imshow(data,cmap='gray')
-    plt.show()
+    # plt.imshow(data,cmap='gray')
+    # plt.show()
     return data
 
 

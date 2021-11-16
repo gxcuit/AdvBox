@@ -51,7 +51,11 @@ class MyTestCase(unittest.TestCase):
         #BackDoor.one_pixel_generate_poison_csv(PATH + 'csv/mnist_train_3wa.csv', 7, 8, PATH + 'csv/mnist_one_pixel.csv',
         #                              0.5)
 
-        BackDoor.blended_injection(PATH + 'csv/mnist_train_3wa.csv',PATH + 'csv/mnist_ble_inj.csv',0,500)
+        BackDoor.blended_injection(PATH + 'csv/mnist_train_3wa.csv',PATH + 'csv/mnist_ble_inj.csv',
+                      0,PATH+'poison/x_inv.jpg',3000,0.2)
+        BackDoor.blended_injection(PATH + 'csv/mnist_test.csv',PATH + 'csv/mnist_ble_inj_test.csv',
+                      0,PATH+'poison/x_inv.jpg',1000,0.2)
+
 
     def test_poison_train(self):
         # data, label = mnist_keras.load_data(PATH + 'csv/mnist_train_3wa_poison.csv')
@@ -67,14 +71,22 @@ class MyTestCase(unittest.TestCase):
         # data, label = mnist_keras.load_data(PATH + 'csv/mnist_test.csv')
         # self.model.eval('../model/poison.h5', data, label)
         data, label = mnist_keras.load_data(PATH + 'csv/mnist_ble_inj_test.csv')
+        data=data[0:500]
+        label=label[0:500]
         self.model.eval('../model/blended_injection.h5', data, label)
 
     def test_eval_and_show_image(self):
-        img = CSVUtils.get_csv_image('../mnist/MNIST/raw/csv/mnist_ble_inj_test.csv', 2500, 1, -2)
+        img = CSVUtils.get_csv_image('../mnist/MNIST/raw/csv/mnist_ble_inj_test.csv', 1021, 1, -2)
         #img[27][27]=255
         plt.imshow(img,cmap='gray')
         plt.show()
         self.model.predict_img('../model/blended_injection.h5',img)
+    def test_show_one_image(self):
+        img = CSVUtils.get_csv_image('../mnist/MNIST/raw/csv/mnist_ble_inj.csv', 1, 1, -2)
+        # img[27][27]=255
+        # plt.imshow(img, cmap='gray')
+        plt.imshow(img, cmap='gray')
+        plt.show()
 
 
     def test_fate_eval(self):
